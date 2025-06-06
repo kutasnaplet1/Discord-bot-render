@@ -35,6 +35,7 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
+# Moderators storage
 MODERATORS = set()
 
 @bot.event
@@ -179,33 +180,75 @@ async def info(ctx, member: discord.Member = None):
     
     await ctx.send(embed=embed)
 
-@bot.command()
-async def pomoc(ctx):
-    help_embed = discord.Embed(
-        title="📋 Lista Komend",
-        description="Wszystkie dostępne komendy bota:",
+@bot.command(name='help')
+async def help_command(ctx):
+    embed = discord.Embed(
+        title="🤖 Pomoc - Komendy Bota",
+        description="Lista dostępnych komend",
         color=0x0099ff
     )
     
-    help_embed.add_field(
-        name="🔨 Moderacja",
-        value="!ban @user [powód]\n!mute @user [powód]\n!unmute @user\n!clear [liczba]\n!addmod @user\n!removemod @user",
+    embed.add_field(
+        name="👑 Tylko właściciel",
+        value="`!addmod @użytkownik` - nadaje uprawnienia\n`!removemod @użytkownik` - odbiera uprawnienia",
         inline=False
     )
     
-    help_embed.add_field(
-        name="🎮 Zabawa",
-        value="!czesc - powitanie\n!szynszyl - losowy szynszyl\n!losuj [opcje] - losowanie\n!kostka [liczba] - rzut kostką\n!moneta - rzut monetą",
+    embed.add_field(
+        name="⚡ Moderacja",
+        value="`!ban @użytkownik [powód]` - banuje\n"
+              "`!mute @użytkownik [powód]` - wycisza\n"
+              "`!unmute @użytkownik` - odwycisza\n"
+              "`!clear <liczba>` - usuwa wiadomości",
         inline=False
     )
     
-    help_embed.add_field(
+    embed.add_field(
         name="ℹ️ Informacje",
-        value="!info [@user] - info o użytkowniku\n!ping - ping bota\n!pomoc - ta lista",
+        value="`!info [@użytkownik]` - informacje o użytkowniku\n"
+              "`!ping` - sprawdza ping bota",
         inline=False
     )
     
-    await ctx.send(embed=help_embed)
+    embed.add_field(
+        name="🎉 Fun",
+        value="`!czesc` - powitanie Tom Nass\n"
+              "`!szynszyl` - losuje gdzie szynszyl\n"
+              "`!losuj [opcje]` - losuje liczby lub opcje\n"
+              "`!kostka [ile]` - rzuca kostką\n"
+              "`!moneta` - rzuca monetą",
+        inline=False
+    )
+    
+    embed.set_footer(text="Bot działa 24/7 na Render")
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def pomoc(ctx):
+    help_text = """**LISTA KOMEND BOTA:**
+
+**Moderacja:**
+!ban @user [powód] - banowanie
+!mute @user [powód] - wyciszenie
+!unmute @user - odwyciszenie
+!clear [liczba] - usuwanie wiadomości
+!addmod @user - nadanie uprawnień (właściciel)
+!removemod @user - odebranie uprawnień (właściciel)
+
+**Zabawa:**
+!czesc - powitanie
+!szynszyl - losowy szynszyl
+!losuj [opcje] - losowanie
+!kostka [liczba] - rzut kostką
+!moneta - rzut monetą
+
+**Informacje:**
+!info [@user] - info o użytkowniku
+!ping - ping bota
+!help / !pomoc - pomoc
+
+Właściciel serwera ma pełne uprawnienia."""
+    await ctx.send(help_text)
 
 if __name__ == "__main__":
     # Start HTTP keepalive server
