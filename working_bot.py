@@ -157,10 +157,10 @@ async def user_info(ctx, member: discord.Member = None):
     
     embed = discord.Embed(title=f"Informacje o {member.display_name}", color=0x0099ff)
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.add_field(name="ID", value=member.id, inline=True)
+    embed.add_field(name="ID", value=str(member.id), inline=True)
     if member.joined_at:
         embed.add_field(name="Dołączył", value=f"<t:{int(member.joined_at.timestamp())}:R>", inline=True)
-    embed.add_field(name="Najwyższa rola", value=member.top_role.mention, inline=True)
+    embed.add_field(name="Rola", value=str(member.top_role), inline=True)
     await ctx.send(embed=embed)
 
 @bot.command(name='help')
