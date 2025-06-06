@@ -312,7 +312,7 @@ async def coin_command(ctx):
 async def help_command(ctx):
     embed = discord.Embed(
         title="🤖 Bot Render 24/7",
-        description="Automatyczne aktualizacje z GitHub - bot działa non-stop!",
+        description="Bot działa non-stop!",
         color=Colors.INFO
     )
     
@@ -324,19 +324,19 @@ async def help_command(ctx):
     
     embed.add_field(
         name="⚡ Moderacja",
-        value="`!ban @user [powód]` - banuje\n`!mute @user [czas] [powód]` - wycisza\n`!unmute @user` - odwycisza\n`!clear <liczba>` - usuwa wiadomości",
+        value="`!ban @user` - banuje\n`!mute @user` - wycisza\n`!unmute @user` - odwycisza\n`!clear 10` - usuwa wiadomości",
         inline=False
     )
     
     embed.add_field(
         name="🎉 Fun",
-        value="`!czesc` - powitanie\n`!szynszyl` - losowanie\n`!losuj [opcje]` - losuje\n`!kostka [ile]` - rzuca kostką\n`!moneta` - rzuca monetą",
+        value="`!czesc` - powitanie\n`!szynszyl` - losowanie\n`!losuj` - losuje\n`!kostka` - rzuca kostką\n`!moneta` - rzuca monetą",
         inline=False
     )
     
     embed.add_field(
         name="ℹ️ Informacje",
-        value="`!info [@user]` - informacje\n`!ping` - sprawdza ping",
+        value="`!info` - informacje\n`!ping` - sprawdza ping",
         inline=False
     )
     
@@ -347,12 +347,12 @@ async def help_command(ctx):
 if __name__ == "__main__":
     token = os.getenv('DISCORD_TOKEN')
     if not token:
-        logger.error("DISCORD_TOKEN not found in environment variables!")
+        logger.error("DISCORD_TOKEN not found!")
         exit(1)
     
     try:
-        logger.info("Uruchamianie naprawionego bota na Render 24/7...")
+        logger.info("Uruchamianie bota na Render 24/7...")
         bot.run(token)
     except Exception as e:
-        logger.error(f"Błąd podczas uruchamiania bota: {e}")
+        logger.error(f"Błąd: {e}")
         exit(1)
