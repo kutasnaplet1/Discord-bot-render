@@ -324,4 +324,35 @@ async def help_command(ctx):
     
     embed.add_field(
         name="⚡ Moderacja",
-        value="`!ban @user [powód]` - banuje\n`!mute @user [czas] [powód]` - wycisza\n`!unmute @user` - odwycisza\n`!clear <liczba>` -
+        value="`!ban @user [powód]` - banuje\n`!mute @user [czas] [powód]` - wycisza\n`!unmute @user` - odwycisza\n`!clear <liczba>` - usuwa wiadomości",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🎉 Fun",
+        value="`!czesc` - powitanie\n`!szynszyl` - losowanie\n`!losuj [opcje]` - losuje\n`!kostka [ile]` - rzuca kostką\n`!moneta` - rzuca monetą",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="ℹ️ Informacje",
+        value="`!info [@user]` - informacje\n`!ping` - sprawdza ping",
+        inline=False
+    )
+    
+    embed.set_footer(text="Render 24/7")
+    
+    await ctx.send(embed=embed)
+
+if __name__ == "__main__":
+    token = os.getenv('DISCORD_TOKEN')
+    if not token:
+        logger.error("DISCORD_TOKEN not found in environment variables!")
+        exit(1)
+    
+    try:
+        logger.info("Uruchamianie naprawionego bota na Render 24/7...")
+        bot.run(token)
+    except Exception as e:
+        logger.error(f"Błąd podczas uruchamiania bota: {e}")
+        exit(1)
