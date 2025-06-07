@@ -31,7 +31,7 @@ bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 # System moderatorów i kar
 MODERATORS = set()
-USER_PUNISHMENTS = {}  # {user_id: [{"type": "warn", "reason": "...", "date": "...", "by": "..."}]}
+USER_PUNISHMENTS = {}
 
 def add_punishment(user_id, punishment_type, reason, moderator_name):
     """Dodaje karę do historii użytkownika"""
@@ -73,12 +73,10 @@ async def removemod(ctx, member: discord.Member):
 # KOMENDY MODERACYJNE - właściciel może karać każdego, moderatorzy nie mogą karać właściciela
 @bot.command()
 async def ban(ctx, member: discord.Member, *, reason="Brak powodu"):
-    # Sprawdź uprawnienia
     if ctx.author.id != ctx.guild.owner_id and ctx.author.id not in MODERATORS:
         await ctx.send("Nie masz uprawnień do banowania.")
         return
     
-    # Moderatorzy nie mogą banować właściciela
     if member.id == ctx.guild.owner_id and ctx.author.id != ctx.guild.owner_id:
         await ctx.send("Nie możesz zbanować właściciela serwera.")
         return
@@ -114,7 +112,7 @@ async def mute(ctx, member: discord.Member, czas: int = 10, *, reason="Brak powo
         return
     
     # Maksymalnie 50 dni
-    if czas > 50 * 24 * 60:  # 50 dni w minutach
+    if czas > 50 * 24 * 60:
         czas = 50 * 24 * 60
         await ctx.send(f"Maksymalny czas wyciszenia to 50 dni. Ustawiam na {czas // (24 * 60)} dni.")
     
@@ -184,7 +182,7 @@ async def historiakar(ctx, member: discord.Member):
     )
     
     punishments = USER_PUNISHMENTS[member.id]
-    for i, punishment in enumerate(punishments[-10:], 1):  # Ostatnie 10 kar
+    for i, punishment in enumerate(punishments[-10:], 1):
         embed.add_field(
             name=f"{i}. {punishment['type'].upper()}",
             value=f"**Powód:** {punishment['reason']}\n**Data:** {punishment['date']}\n**Przez:** {punishment['by']}",
@@ -223,15 +221,30 @@ async def napisz(ctx, channel: discord.TextChannel, *, message):
     try:
         await channel.send(message)
         await ctx.message.delete()
-        # Potwierdzenie na DM
         try:
             await ctx.author.send(f"✅ Wiadomość wysłana na {channel.mention}:\n{message}")
         except:
-            pass  # Jeśli nie można wysłać DM
+            pass
     except:
         await ctx.send("Błąd podczas wysyłania wiadomości.")
 
-# KOMENDY INFORMACYJNE
+@bot.command()
+async def napiszdm(ctx, user_id: int, *, message):
+    if ctx.author.id != ctx.guild.owner_id:
+        return
+    
+    try:
+        user = await bot.fetch_user(user_id)
+        await user.send(message)
+        await ctx.message.delete()
+        await ctx.author.send(f"✅ DM wysłany do {user.name}#{user.discriminator}:\n{message}")
+    except discord.NotFound:
+        await ctx.author.send(f"❌ Nie znaleziono użytkownika o ID: {user_id}")
+    except discord.Forbidden:
+        await ctx.author.send(f"❌ Nie można wysłać DM do użytkownika {user.name}#{user.discriminator} - ma zablokowane wiadomości prywatne")
+    except Exception as e:
+        await ctx.author.send(f"❌ Błąd podczas wysyłania DM: {str(e)}")
+
 @bot.command()
 async def sprawdz(ctx, member: discord.Member):
     embed = discord.Embed(
@@ -251,7 +264,6 @@ async def sprawdz(ctx, member: discord.Member):
     embed.add_field(name="Konto utworzone", value=member.created_at.strftime("%d.%m.%Y %H:%M"), inline=True)
     embed.add_field(name="Najwyższa rola", value=member.top_role.mention, inline=True)
     
-    # Dodaj informację o karach
     if member.id in USER_PUNISHMENTS and USER_PUNISHMENTS[member.id]:
         embed.add_field(name="Łączna liczba kar", value=len(USER_PUNISHMENTS[member.id]), inline=True)
     else:
@@ -259,7 +271,6 @@ async def sprawdz(ctx, member: discord.Member):
     
     await ctx.send(embed=embed)
 
-# KOMENDY ROZRYWKOWE
 @bot.command()
 async def fabian(ctx):
     await ctx.send("to cwel")
@@ -276,11 +287,9 @@ async def kutas(ctx):
 async def szynszyl(ctx):
     choices = ["kondomie", "tosterze", "butelce", "pralce", "panierce"]
     weights = [2, 8, 20, 20, 50]
-    
     result = random.choices(choices, weights=weights)[0]
     await ctx.send(f"szynszyl w {result}")
 
-# PODSTAWOWE KOMENDY
 @bot.command()
 async def ping(ctx):
     await ctx.send(f"Pong! {round(bot.latency * 1000)}ms")
@@ -300,7 +309,6 @@ async def help(ctx):
         color=0x0099ff
     )
     
-    # Komendy dla właściciela
     if ctx.author.id == ctx.guild.owner_id:
         embed.add_field(
             name="👑 Komendy właściciela",
@@ -308,7 +316,6 @@ async def help(ctx):
             inline=False
         )
     
-    # Komendy moderacyjne
     if ctx.author.id == ctx.guild.owner_id or ctx.author.id in MODERATORS:
         embed.add_field(
             name="🛡️ Komendy moderacyjne",
@@ -332,7 +339,6 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 if __name__ == "__main__":
-    # Start HTTP server
     http_thread = threading.Thread(target=run_http_server, daemon=True)
     http_thread.start()
     print("HTTP keepalive started on port 5000")
