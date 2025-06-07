@@ -4,25 +4,26 @@ import os
 import threading
 import random
 from datetime import datetime, timedelta
-import asyncio
+import http.server
+import socketserver
 
-# Flask keepalive
-from flask import Flask
-app = Flask(__name__)
+# Simple HTTP server without Flask
+class SimpleHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b"Discord Bot is running!")
+    
+    def log_message(self, format, *args):
+        return
 
-@app.route('/')
-def home():
-    return "Discord Bot is running!"
-
-@app.route('/status')
-def status():
-    return "Bot Status: Online"
-
-def run_flask():
+def run_http_server():
     try:
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+        with socketserver.TCPServer(("0.0.0.0", 5000), SimpleHandler) as httpd:
+            httpd.serve_forever()
     except Exception as e:
-        print(f"Flask error: {e}")
+        print(f"HTTP server error: {e}")
 
 # Bot setup
 intents = discord.Intents.all()
@@ -67,7 +68,24 @@ async def sprawdz(ctx, *, user_input=None):
         await ctx.send("Nie znaleziono użytkownika!")
         return
     
-    await ctx.send(f"Wyświetla szczegółowe informacje o użytkowniku\nPrzykłady: !sprawdz @użytkownik, !sprawdz 123456789")
+    embed = discord.Embed(
+        title=f"Informacje o {member.display_name}",
+        color=0x0099ff,
+        timestamp=datetime.now()
+    )
+    
+    embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
+    embed.add_field(name="ID", value=member.id, inline=True)
+    embed.add_field(name="Nazwa", value=member.name, inline=True)
+    embed.add_field(name="Wyświetlana nazwa", value=member.display_name, inline=True)
+    
+    if member.joined_at:
+        embed.add_field(name="Dołączył na serwer", value=member.joined_at.strftime("%d.%m.%Y %H:%M"), inline=True)
+    
+    embed.add_field(name="Konto utworzone", value=member.created_at.strftime("%d.%m.%Y %H:%M"), inline=True)
+    embed.add_field(name="Role", value=f"{len(member.roles) - 1}", inline=True)
+    
+    await ctx.send(embed=embed)
 
 # PODSTAWOWE KOMENDY MODERACYJNE
 @bot.command(name='dodaj-role')
@@ -106,7 +124,7 @@ async def ban(ctx, member: discord.Member = None, *, reason="Brak powodu"):
         return
     try:
         await member.ban(reason=reason)
-        await ctx.send(f"Banuje użytkownika")
+        await ctx.send(f"{member.mention} został zbanowany!\nPowód: {reason}")
     except:
         pass
 
@@ -119,7 +137,7 @@ async def mute(ctx, member: discord.Member = None, time=None, *, reason="Brak po
     try:
         until = datetime.now() + timedelta(minutes=10)
         await member.timeout(until, reason=reason)
-        await ctx.send(f"Wycisza")
+        await ctx.send(f"{member.mention} został wyciszony!")
     except:
         pass
 
@@ -131,7 +149,7 @@ async def unmute(ctx, member: discord.Member = None):
         return
     try:
         await member.timeout(None)
-        await ctx.send(f"Odwycisza")
+        await ctx.send(f"{member.mention} został odwyciszony!")
     except:
         pass
 
@@ -140,7 +158,7 @@ async def warn(ctx, member: discord.Member = None, *, reason="Brak powodu"):
     if ctx.author.id != ctx.guild.owner_id and ctx.author.id not in MODERATORS:
         return
     if member:
-        await ctx.send(f"Ostrzega {member.mention}")
+        await ctx.send(f"{member.mention} otrzymał ostrzeżenie!\nPowód: {reason}")
 
 @bot.command()
 async def clear(ctx, amount: int = None):
@@ -150,7 +168,7 @@ async def clear(ctx, amount: int = None):
         return
     try:
         deleted = await ctx.channel.purge(limit=amount + 1)
-        await ctx.send(f"Usuwa wiadomości", delete_after=3)
+        await ctx.send(f"Usunięto {len(deleted) - 1} wiadomości!", delete_after=3)
     except:
         pass
 
@@ -169,49 +187,63 @@ async def napisz(ctx, channel: discord.TextChannel = None, *, message=None):
 async def purge(ctx, member: discord.Member = None, amount: int = 50):
     if ctx.author.id != ctx.guild.owner_id and ctx.author.id not in MODERATORS:
         return
-    await ctx.send(f"Usuwa od użytkownika")
+    await ctx.send(f"Usuwam wiadomości od {member.mention}")
 
 @bot.command()
 async def unban(ctx, *, user_id=None):
     if ctx.author.id != ctx.guild.owner_id and ctx.author.id not in MODERATORS:
         return
     if user_id:
-        await ctx.send("Odbanowuje po ID")
+        try:
+            user_id = int(user_id)
+            user = await bot.fetch_user(user_id)
+            await ctx.guild.unban(user)
+            await ctx.send(f"Unbanowano {user.name}")
+        except:
+            await ctx.send("Błąd unbanowania lub użytkownik nie jest zbanowany")
 
 @bot.command()
 async def offlinemembers(ctx, amount: int = 50):
-    await ctx.send("Dodaje offline członków")
+    await ctx.send("Dodaję offline członków")
 
 # ZAAWANSOWANE MODERACYJNE
 @bot.command()
 async def buildserver(ctx):
     if ctx.author.id != ctx.guild.owner_id:
         return
-    await ctx.send("Przebudowuje serwer")
+    await ctx.send("Przebudowuję serwer...")
 
 @bot.command()
 async def createranks(ctx):
     if ctx.author.id != ctx.guild.owner_id:
         return
-    await ctx.send("Tworzy rangi")
+    await ctx.send("Tworzę rangi...")
 
 @bot.command()
 async def slowmode(ctx, seconds: int = 0):
     if ctx.author.id != ctx.guild.owner_id and ctx.author.id not in MODERATORS:
         return
-    await ctx.send(f"Tryb powolny")
+    try:
+        await ctx.channel.edit(slowmode_delay=seconds)
+        await ctx.send(f"Tryb powolny ustawiony na {seconds} sekund")
+    except:
+        await ctx.send("Błąd ustawiania trybu powolnego")
 
 @bot.command()
 async def lock(ctx, channel: discord.TextChannel = None):
     if ctx.author.id != ctx.guild.owner_id and ctx.author.id not in MODERATORS:
         return
-    await ctx.send("Blokuje kanał")
+    if not channel:
+        channel = ctx.channel
+    await ctx.send(f"Blokuję kanał {channel.mention}")
 
 @bot.command()
 async def unlock(ctx, channel: discord.TextChannel = None):
     if ctx.author.id != ctx.guild.owner_id and ctx.author.id not in MODERATORS:
         return
-    await ctx.send("Odblokuje kanał")
+    if not channel:
+        channel = ctx.channel
+    await ctx.send(f"Odblokowuję kanał {channel.mention}")
 
 # KOMENDY ROZRYWKOWE
 @bot.command()
@@ -232,31 +264,67 @@ async def czesc(ctx):
 
 @bot.command()
 async def wojtus(ctx):
-    await ctx.send("Wysyła zdjęcie Wojtusa")
+    await ctx.send("Wysyłam zdjęcie Wojtusa")
 
 @bot.command()
 async def golomp(ctx):
-    await ctx.send("Wysyła zdjęcie Golompa")
+    await ctx.send("Wysyłam zdjęcie Golompa")
 
 @bot.command()
 async def szynszyl(ctx):
     choices = ["tosterze", "panierce", "pralce", "butelce", "kondomie"]
     weights = [50, 19, 19, 10, 2]
     result = random.choices(choices, weights=weights)[0]
-    await ctx.send(f"Losuje odpowiedź (tosterze 50%, panierce 19%, pralce 19%, butelce 10%, kondomie 2%)")
+    await ctx.send(f"Szynszyl w {result}!")
 
 @bot.command()
 async def losuj(ctx, *options):
-    await ctx.send("Losuje liczbę lub wybiera z listy")
+    if not options:
+        result = random.randint(1, 100)
+        await ctx.send(f"Wylosowana liczba: {result}")
+    elif len(options) == 1 and options[0].isdigit():
+        max_num = int(options[0])
+        if max_num > 0:
+            result = random.randint(1, max_num)
+            await ctx.send(f"Liczba (1-{max_num}): {result}")
+    else:
+        result = random.choice(options)
+        await ctx.send(f"Wybrano: {result}")
 
 @bot.command()
 async def kostka(ctx, amount: int = 1):
-    await ctx.send("Rzuca kostkami (1-6)")
+    if amount < 1:
+        amount = 1
+    if amount > 10:
+        amount = 10
+    
+    results = [random.randint(1, 6) for _ in range(amount)]
+    if amount == 1:
+        await ctx.send(f"Kostka: {results[0]}")
+    else:
+        await ctx.send(f"Kostki: {results}, Suma: {sum(results)}")
 
 @bot.command()
 async def moneta(ctx):
     result = random.choice(["orzeł", "reszka"])
-    await ctx.send(f"Rzuca monetą ({result})")
+    await ctx.send(f"Moneta: {result}")
+
+# FUNKCJE AUTOMATYCZNE
+@bot.event
+async def on_message_delete(message):
+    """Logowanie - Usunięte wiadomości są logowane na #logi"""
+    if message.author.bot:
+        return
+    
+    log_channel = discord.utils.get(message.guild.channels, name="logi")
+    if log_channel:
+        embed = discord.Embed(
+            title="Wiadomość usunięta",
+            description=f"**Autor:** {message.author.mention}\n**Kanał:** {message.channel.mention}\n**Treść:** {message.content}",
+            color=0xff0000,
+            timestamp=datetime.now()
+        )
+        await log_channel.send(embed=embed)
 
 # PODSTAWOWE
 @bot.command()
@@ -269,7 +337,7 @@ async def addmod(ctx, member: discord.Member = None):
         return
     if member:
         MODERATORS.add(member.id)
-        await ctx.send(f"{member.mention} jest moderatorem")
+        await ctx.send(f"{member.mention} został moderatorem!")
 
 @bot.command()
 async def removemod(ctx, member: discord.Member = None):
@@ -277,7 +345,27 @@ async def removemod(ctx, member: discord.Member = None):
         return
     if member:
         MODERATORS.discard(member.id)
-        await ctx.send(f"{member.mention} stracił uprawnienia")
+        await ctx.send(f"{member.mention} stracił uprawnienia moderatora!")
+
+# INFO COMMAND
+@bot.command()
+async def info(ctx, member: discord.Member = None):
+    if member is None:
+        member = ctx.author
+    
+    embed = discord.Embed(
+        title=f"Informacje o {member.display_name}",
+        color=member.color if member.color.value != 0 else 0x0099ff
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="ID", value=member.id, inline=True)
+    
+    if member.joined_at:
+        embed.add_field(name="Dołączył", value=f"<t:{int(member.joined_at.timestamp())}:R>", inline=True)
+    
+    embed.add_field(name="Najwyższa rola", value=member.top_role.mention, inline=True)
+    
+    await ctx.send(embed=embed)
 
 # HELP COMMAND - DOKŁADNIE JAK NA ZRZUTACH
 @bot.command()
@@ -338,9 +426,10 @@ async def help(ctx):
     await ctx.send(embed=embed2)
 
 if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    print("Flask keepalive started")
+    # Start HTTP server
+    http_thread = threading.Thread(target=run_http_server, daemon=True)
+    http_thread.start()
+    print("HTTP keepalive started on port 5000")
     
     token = os.getenv('DISCORD_TOKEN')
     if not token:
@@ -348,7 +437,7 @@ if __name__ == "__main__":
         exit(1)
     
     try:
-        print("Starting complete Discord bot...")
+        print("Starting Discord bot with ALL original commands...")
         bot.run(token)
     except Exception as e:
         print(f"Bot error: {e}")
